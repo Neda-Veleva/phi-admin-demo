@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   trainingsCount: number;
-  hotLeadsCount: number;
   newLeadsCount: number;
   leadSignupsCount: number;
   vipPassInterestsCount: number;
@@ -11,7 +10,6 @@ interface SidebarProps {
 
 export function Sidebar({
   trainingsCount,
-  hotLeadsCount,
   newLeadsCount,
   leadSignupsCount,
   vipPassInterestsCount,
@@ -84,7 +82,6 @@ export function Sidebar({
             <NavLink className={({ isActive }) => `sidebar-sublink ${isActive ? 'active' : ''}`} to="/interests" end>
               Заинтересовани хора
               <span className="sidebar-inline-badges">
-                <span className="soft-pill hot">{hotLeadsCount} горещи</span>
                 <span className="soft-pill new">{newLeadsCount} нови</span>
               </span>
             </NavLink>

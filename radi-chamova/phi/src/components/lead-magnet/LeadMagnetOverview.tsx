@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FileText, Lightbulb, Mail, Sparkles } from 'lucide-react';
+import { FileText, Lightbulb, Mail } from 'lucide-react';
 import { useAdmin } from '../../context/admin-context';
 
 export function LeadMagnetOverview() {
@@ -39,11 +39,11 @@ export function LeadMagnetOverview() {
         </article>
         <article className="stat-card">
           <div className="stat-icon stat-icon--teal">
-            <Sparkles size={18} />
+            <Lightbulb size={18} />
           </div>
           <span className="stat-label">Следваща стъпка</span>
           <strong>Една стъпка</strong>
-          <p>напред — към „Заинтересовани хора“ за най-горещите контакти</p>
+          <p>напред — към „Заинтересовани хора“ за последващи действия и записвания</p>
         </article>
       </section>
 

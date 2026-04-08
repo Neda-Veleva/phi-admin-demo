@@ -7,7 +7,6 @@ import type {
   InterestNote,
   InterestedPerson,
   InterestStatus,
-  InterestTemperature,
 } from '../types';
 
 function createBlankInterest(): InterestedPerson {
@@ -171,22 +170,11 @@ export function InterestFormPage() {
             onChange={(event) => updateDraft('status', event.target.value as InterestStatus)}
           >
             <option value="new">Нов</option>
-            <option value="contacted">Контактуван</option>
-            <option value="qualified">Квалифициран</option>
-            <option value="reserved">Резервирано място</option>
-            <option value="archived">Архив</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>Температура</span>
-          <select
-            className="select"
-            value={draft.temperature}
-            onChange={(event) => updateDraft('temperature', event.target.value as InterestTemperature)}
-          >
-            <option value="hot">Горещ</option>
-            <option value="warm">Топъл</option>
-            <option value="cold">Студен</option>
+            <option value="no_answer">Не вдига</option>
+            <option value="interested">Проявява интерес</option>
+            <option value="not_interested">Не се интересува</option>
+            <option value="enrolled">Записал се</option>
+            <option value="completed">Завършил</option>
           </select>
         </label>
         <label className="field">

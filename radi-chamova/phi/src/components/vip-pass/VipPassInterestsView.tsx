@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2 } from 'lucide-react';
+import { CheckSquare, Copy, Plus, Square, Trash2 } from 'lucide-react';
 import { createId } from '../../lib/format';
 import { vipPassKindLabel } from '../../lib/vip-pass';
 import { useAdmin } from '../../context/admin-context';
@@ -10,6 +10,7 @@ export function VipPassInterestsView() {
   const { store, upsertVipPassInterest, removeVipPassInterest } = useAdmin();
   const [kindFilter, setKindFilter] = useState<'all' | VipPassKind>('all');
   const [toast, setToast] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState({
     fullName: '',
     email: '',
@@ -25,9 +26,60 @@ export function VipPassInterestsView() {
     return list.filter((r) => r.kind === kindFilter);
   }, [kindFilter, store.vipPassInterests]);
 
+  useEffect(() => {
+    setSelected((prev) => new Set([...prev].filter((id) => rows.some((r) => r.id === id))));
+  }, [rows]);
+
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(null), 3800);
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedEmails = useMemo(() => {
+    const emails = rows.filter((r) => selected.has(r.id)).map((r) => r.email.trim()).filter(Boolean);
+    return [...new Set(emails)];
+  }, [rows, selected]);
+
+  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const someSelected = selectedEmails.length > 0;
+
+  function toggleSelectAllVisible() {
+    if (allVisibleSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        rows.forEach((r) => next.delete(r.id));
+        return next;
+      });
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      rows.forEach((r) => next.add(r.id));
+      return next;
+    });
+  }
+
+  async function copySelectedEmails() {
+    if (!someSelected) {
+      showToast('Изберете поне един контакт.');
+      return;
+    }
+    const text = selectedEmails.join(', ');
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Имейлите са копирани в клипборда.');
+    } catch {
+      showToast('Копирането не бе успешно — опитайте отново.');
+    }
   }
 
   function handleAdd() {
@@ -118,10 +170,26 @@ export function VipPassInterestsView() {
             Към календара за часове →
           </Link>
         </div>
+
+        <div className="bulk-bar">
+          <button type="button" className="text-button bulk-bar__select" onClick={toggleSelectAllVisible} disabled={rows.length === 0}>
+            {allVisibleSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+            {allVisibleSelected ? 'Премахни избора от видимите' : 'Избери всички видими'}
+          </button>
+          <span className="bulk-bar__count">{selectedEmails.length} избрани</span>
+          <div className="bulk-bar__buttons">
+            <button type="button" className="button secondary button--compact" onClick={copySelectedEmails} disabled={!someSelected}>
+              <Copy size={16} />
+              Копирай имейли
+            </button>
+          </div>
+        </div>
+
         <div className="lead-article-table-wrap">
           <table className="data-table data-table--compact">
             <thead>
               <tr>
+                <th className="th-check" aria-label="Избор" />
                 <th>Тип</th>
                 <th>Име</th>
                 <th>Имейл</th>
@@ -133,13 +201,16 @@ export function VipPassInterestsView() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="empty-state compact">Няма записи. Добавете първия или изчакайте заявки от сайта.</div>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
                   <tr key={row.id}>
+                    <td className="td-check">
+                      <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelected(row.id)} />
+                    </td>
                     <td>
                       <span className={`vip-kind-pill vip-kind-pill--${row.kind}`}>{vipPassKindLabel(row.kind)}</span>
                     </td>

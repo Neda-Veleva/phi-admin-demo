@@ -24,6 +24,10 @@ export function countSlotsForMonth(slots: VipPassSlot[], yearMonth: string, kind
   return slots.filter((s) => s.yearMonth === yearMonth && s.kind === kind).length;
 }
 
+export function countSlotsForMonthAll(slots: VipPassSlot[], yearMonth: string): number {
+  return slots.filter((s) => s.yearMonth === yearMonth).length;
+}
+
 export function slotsForDayFilter(slots: VipPassSlot[], dateKey: string, kind: VipPassKind): VipPassSlot[] {
   return slots.filter((s) => s.date === dateKey && s.kind === kind).sort((a, b) => a.time.localeCompare(b.time));
 }

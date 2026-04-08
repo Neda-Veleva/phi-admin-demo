@@ -58,13 +58,14 @@ export function trainingStatusLabel(status: 'draft' | 'scheduled' | 'published' 
   }[status];
 }
 
-export function interestStatusLabel(status: 'new' | 'contacted' | 'qualified' | 'reserved' | 'archived') {
+export function interestStatusLabel(status: 'new' | 'no_answer' | 'interested' | 'not_interested' | 'enrolled' | 'completed') {
   return {
     new: 'Нов',
-    contacted: 'Контактуван',
-    qualified: 'Квалифициран',
-    reserved: 'Резервиран',
-    archived: 'Архив',
+    no_answer: 'Не вдига',
+    interested: 'Проявява интерес',
+    not_interested: 'Не се интересува',
+    enrolled: 'Записал се',
+    completed: 'Завършил',
   }[status];
 }
 

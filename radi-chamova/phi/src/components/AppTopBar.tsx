@@ -5,7 +5,6 @@ function resolveTopbar(pathname: string): { eyebrow?: string; title: string; sub
     return {
       eyebrow: 'Phi Academy',
       title: 'Табло',
-      subtitle: 'Тук е спокойно — обученията, хората и подаръците за клиенти са подредени ясно.',
     };
   }
   if (pathname === '/trainings') {

@@ -28,7 +28,8 @@ import type {
   VipPassSlot,
 } from './types';
 import { VipPassInterestsView } from './components/vip-pass/VipPassInterestsView';
-import { VipPassSlotsView } from './components/vip-pass/VipPassSlotsView';
+import { VipPassSlotsListView } from './components/vip-pass/VipPassSlotsListView';
+import { VipPassSlotsNewPage } from './components/vip-pass/VipPassSlotsNewPage';
 
 function useStandaloneFormRoute() {
   const { pathname } = useLocation();
@@ -229,7 +230,6 @@ export default function App() {
 
   const summary = useMemo(() => {
     return {
-      hotLeads: store.interests.filter((person) => person.temperature === 'hot').length,
       newLeads: store.interests.filter((person) => person.status === 'new').length,
     };
   }, [store.interests]);
@@ -241,7 +241,6 @@ export default function App() {
       <div className="app-shell">
         <Sidebar
           trainingsCount={store.trainings.length}
-          hotLeadsCount={summary.hotLeads}
           newLeadsCount={summary.newLeads}
           leadSignupsCount={store.leadSignups.length}
           vipPassInterestsCount={store.vipPassInterests.length}
@@ -268,7 +267,8 @@ export default function App() {
             <Route path="/services/new" element={<ServiceFormPage />} />
             <Route path="/services/:serviceId/edit" element={<ServiceFormPage />} />
             <Route path="/vip-pass" element={<Navigate to="/vip-pass/slots" replace />} />
-            <Route path="/vip-pass/slots" element={<VipPassSlotsView />} />
+            <Route path="/vip-pass/slots" element={<VipPassSlotsListView />} />
+            <Route path="/vip-pass/slots/new" element={<VipPassSlotsNewPage />} />
             <Route path="/vip-pass/interests" element={<VipPassInterestsView />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
