@@ -25,10 +25,6 @@ export function DashboardView() {
         <div>
           <span className="eyebrow">Добре дошли</span>
           <h2>Какво правим днес?</h2>
-          <p>
-            Изберете тема от менюто вляво или от бутоните тук — без стъпки, без объркване, само това, което ви трябва за
-            академията.
-          </p>
         </div>
         <div className="hero-actions">
           <Link className="button primary" to="/trainings">
