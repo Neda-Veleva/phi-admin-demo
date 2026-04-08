@@ -1,6 +1,6 @@
 export type TrainingStatus = 'draft' | 'scheduled' | 'published' | 'archived';
 export type TrainingFormat = 'live' | 'online' | 'hybrid';
-export type InterestStatus = 'new' | 'contacted' | 'qualified' | 'reserved' | 'archived';
+export type InterestStatus = 'new' | 'no_answer' | 'interested' | 'not_interested' | 'enrolled' | 'completed';
 export type InterestTemperature = 'hot' | 'warm' | 'cold';
 
 export interface Training {
@@ -101,7 +101,7 @@ export interface Service {
   updatedAt: string;
 }
 
-/** Извънреден VIP час (2–4 на месец за тип услуга). */
+/** Извънреден VIP час (до 4 общо за месеца, за двата типа услуги). */
 export interface VipPassSlot {
   id: string;
   kind: VipPassKind;

@@ -7,6 +7,7 @@ import {
   VIP_MIN_SLOTS_RECOMMENDED,
   buildCalendarCells,
   countSlotsForMonth,
+  countSlotsForMonthAll,
   dateKeyFromDate,
   formatMonthYearBg,
   formatWeekdayDateBg,
@@ -19,12 +20,13 @@ import {
 import { useAdmin } from '../../context/admin-context';
 import type { VipPassKind, VipPassSlot } from '../../types';
 
-const MAILTO_SAFE = 1850;
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'нд'];
+type KindFilter = VipPassKind | 'all';
+const MAILTO_SAFE = 1850;
 
-export function VipPassSlotsView() {
+export function VipPassSlotsNewPage() {
   const { store, upsertVipPassSlot, removeVipPassSlot } = useAdmin();
-  const [kind, setKind] = useState<VipPassKind>('brows');
+  const [kind, setKind] = useState<KindFilter>('all');
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -37,19 +39,53 @@ export function VipPassSlotsView() {
   const ym = yearMonthFromDate(visibleMonth);
   const cells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth]);
 
-  const countMonth = useMemo(
-    () => countSlotsForMonth(store.vipPassSlots, ym, kind),
+  const countMonthForKind = useMemo(
+    () => (kind === 'all' ? countSlotsForMonthAll(store.vipPassSlots, ym) : countSlotsForMonth(store.vipPassSlots, ym, kind)),
     [store.vipPassSlots, ym, kind]
   );
+  const countMonthTotal = useMemo(() => countSlotsForMonthAll(store.vipPassSlots, ym), [store.vipPassSlots, ym]);
+
+  const monthSlotsForEmail = useMemo(() => {
+    if (kind === 'all') return [];
+    return store.vipPassSlots
+      .filter((s) => s.yearMonth === ym && s.kind === kind)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }, [store.vipPassSlots, ym, kind]);
+
+  const interestsForKind = useMemo(() => {
+    if (kind === 'all') return [];
+    return store.vipPassInterests.filter((i) => i.kind === kind);
+  }, [store.vipPassInterests, kind]);
+
+  useEffect(() => {
+    if (kind === 'all') {
+      setNotifySelected(new Set());
+      return;
+    }
+    setNotifySelected(new Set(interestsForKind.map((i) => i.id)));
+  }, [kind, interestsForKind]);
 
   const selectedKey = selectedDate ? dateKeyFromDate(selectedDate) : null;
-  const daySlots = selectedKey ? slotsForDayFilter(store.vipPassSlots, selectedKey, kind) : [];
+  const daySlots = useMemo(() => {
+    if (!selectedKey) return [];
+    if (kind === 'all') {
+      return store.vipPassSlots
+        .filter((s) => s.date === selectedKey)
+        .slice()
+        .sort((a, b) => a.time.localeCompare(b.time) || a.kind.localeCompare(b.kind));
+    }
+    return slotsForDayFilter(store.vipPassSlots, selectedKey, kind);
+  }, [store.vipPassSlots, selectedKey, kind]);
 
   const startTimes2h = useMemo(() => vipSlotStartTimes2h(), []);
   const blockedTimesForDay = useMemo(() => {
     if (!selectedKey) return { occupied: new Set<string>(), demo: new Set<string>() };
-    const occupied = new Set(daySlots.map((s) => s.time));
-    const demo = vipDemoBlockedStartTimes(selectedKey, kind, startTimes2h);
+    const occupied = new Set(daySlots.filter((s) => kind === 'all' || s.kind === kind).map((s) => s.time));
+    const demo =
+      kind === 'all'
+        ? new Set<string>()
+        : vipDemoBlockedStartTimes(selectedKey, kind, startTimes2h);
     return { occupied, demo };
   }, [selectedKey, kind, daySlots, startTimes2h]);
 
@@ -64,24 +100,6 @@ export function VipPassSlotsView() {
     });
   }, [selectedKey, kind, blockedTimesForDay, startTimes2h]);
 
-  const monthSlots = useMemo(
-    () =>
-      store.vipPassSlots
-        .filter((s) => s.yearMonth === ym && s.kind === kind)
-        .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)),
-    [store.vipPassSlots, ym, kind]
-  );
-
-  const interestsForKind = useMemo(
-    () => store.vipPassInterests.filter((i) => i.kind === kind),
-    [store.vipPassInterests, kind]
-  );
-
-  useEffect(() => {
-    const list = store.vipPassInterests.filter((i) => i.kind === kind);
-    setNotifySelected(new Set(list.map((i) => i.id)));
-  }, [kind, store.vipPassInterests]);
-
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(null), 4200);
@@ -93,55 +111,6 @@ export function VipPassSlotsView() {
 
   function nextMonth() {
     setVisibleMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
-  }
-
-  function isSameDay(a: Date, b: Date) {
-    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  }
-
-  function handlePickDay(d: Date) {
-    setSelectedDate(d);
-  }
-
-  function handleAddSlot() {
-    if (!selectedDate || !selectedKey) {
-      showToast('Изберете ден от календара.');
-      return;
-    }
-    if (countMonth >= VIP_MAX_SLOTS_PER_MONTH) {
-      showToast(`Максимум ${VIP_MAX_SLOTS_PER_MONTH} часа за този месец и тип.`);
-      return;
-    }
-    if (!startTimes2h.includes(time)) {
-      showToast('Изберете начален час от списъка (на всеки 2 часа).');
-      return;
-    }
-    const { occupied, demo } = blockedTimesForDay;
-    if (occupied.has(time) || demo.has(time)) {
-      showToast('Този час не е свободен.');
-      return;
-    }
-    const duplicate = store.vipPassSlots.some(
-      (s) => s.kind === kind && s.date === selectedKey && s.time === time
-    );
-    if (duplicate) {
-      showToast('Този час вече е добавен.');
-      return;
-    }
-    const now = new Date().toISOString();
-    const slot: VipPassSlot = {
-      id: createId('vip-slot'),
-      kind,
-      date: selectedKey,
-      time,
-      yearMonth: ym,
-      notes: '',
-      createdAt: now,
-      updatedAt: now,
-    };
-    upsertVipPassSlot(slot);
-    showToast('Часът е запазен.');
-    setNotifySelected(new Set(interestsForKind.map((i) => i.id)));
   }
 
   function toggleNotify(id: string) {
@@ -161,22 +130,31 @@ export function VipPassSlotsView() {
     setNotifySelected(new Set());
   }
 
-  function openNotifyEmail() {
+  function buildNotifyMailto() {
+    if (kind === 'all') {
+      showToast('Изберете тип (Вежди или Устни), за да известите клиенти.');
+      return null;
+    }
     const recipients = interestsForKind.filter((i) => notifySelected.has(i.id));
     if (recipients.length === 0) {
       showToast('Маркирайте поне един клиент за известяване.');
-      return;
+      return null;
     }
     const emails = [...new Set(recipients.map((r) => r.email.trim()).filter(Boolean))];
     if (emails.length === 0) {
       showToast('Няма валидни имейли.');
-      return;
+      return null;
     }
-    const lines = monthSlots.map((s) => `· ${s.date} в ${s.time} ч.`);
+    if (monthSlotsForEmail.length === 0) {
+      showToast('Първо добавете поне един час за месеца.');
+      return null;
+    }
+
+    const lines = monthSlotsForEmail.map((s) => `· ${s.date} в ${s.time} ч.`);
     const body = [
       'Здравейте,',
       '',
-      `Обявени са VIP часове за ${vipPassKindLabel(kind)} (${formatMonthYearBg(visibleMonth).toLowerCase()}):`,
+      `Обявени са VIP часове за ${vipPassKindLabel(kind)} (${ym}):`,
       '',
       ...lines,
       '',
@@ -185,14 +163,82 @@ export function VipPassSlotsView() {
       'Поздрави,',
       'PHI · phi.bg',
     ].join('\n');
+
     const bcc = emails.join(',');
     const subject = `VIP PASS — ${vipPassKindLabel(kind)} ${ym}`;
     const href = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     if (href.length > MAILTO_SAFE) {
       showToast('Твърде дълъг линк — изберете по-малко получатели.');
+      return null;
+    }
+    return { href, bcc };
+  }
+
+  function openNotifyEmail() {
+    const mailto = buildNotifyMailto();
+    if (!mailto) return;
+    window.location.href = mailto.href;
+  }
+
+  async function sendNotifyEmail() {
+    const mailto = buildNotifyMailto();
+    if (!mailto) return;
+    try {
+      await navigator.clipboard.writeText(mailto.bcc);
+    } catch {
+      // ignore clipboard errors
+    }
+    window.location.href = mailto.href;
+  }
+
+  function isSameDay(a: Date, b: Date) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function handlePickDay(d: Date) {
+    setSelectedDate(d);
+  }
+
+  function handleAddSlot() {
+    if (!selectedDate || !selectedKey) {
+      showToast('Изберете ден от календара.');
       return;
     }
-    window.location.href = href;
+    if (kind === 'all') {
+      showToast('Изберете тип (Вежди или Устни), за да добавите час.');
+      return;
+    }
+    if (countMonthTotal >= VIP_MAX_SLOTS_PER_MONTH) {
+      showToast(`Максимум ${VIP_MAX_SLOTS_PER_MONTH} часа общо за месеца (Вежди + Устни).`);
+      return;
+    }
+    if (!startTimes2h.includes(time)) {
+      showToast('Изберете начален час от списъка (на всеки 2 часа).');
+      return;
+    }
+    const { occupied, demo } = blockedTimesForDay;
+    if (occupied.has(time) || demo.has(time)) {
+      showToast('Този час не е свободен.');
+      return;
+    }
+    const duplicate = store.vipPassSlots.some((s) => s.kind === kind && s.date === selectedKey && s.time === time);
+    if (duplicate) {
+      showToast('Този час вече е добавен.');
+      return;
+    }
+    const now = new Date().toISOString();
+    const slot: VipPassSlot = {
+      id: createId('vip-slot'),
+      kind,
+      date: selectedKey,
+      time,
+      yearMonth: ym,
+      notes: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    upsertVipPassSlot(slot);
+    showToast('Часът е запазен.');
   }
 
   const headerRight = selectedDate ? formatWeekdayDateBg(selectedDate).toUpperCase() : 'ИЗБЕРЕТЕ ДЕН';
@@ -208,7 +254,24 @@ export function VipPassSlotsView() {
     <div className="content-stack content-stack--tight">
       {toast && <div className="toast-banner">{toast}</div>}
 
+      <div className="panel-toolbar panel-toolbar--wrap">
+        <Link className="text-button" to="/vip-pass/slots">
+          Към списъка с часове
+        </Link>
+        <span className="vip-pass-kind-tabs__hint">
+          {countMonthTotal}/{VIP_MAX_SLOTS_PER_MONTH} часа общо за месеца
+          {countMonthForKind < VIP_MIN_SLOTS_RECOMMENDED && ` · за този тип: ${countMonthForKind} · препоръчително поне ${VIP_MIN_SLOTS_RECOMMENDED}`}
+        </span>
+      </div>
+
       <div className="vip-pass-kind-tabs">
+        <button
+          type="button"
+          className={`vip-pass-kind-tabs__btn ${kind === 'all' ? 'is-active' : ''}`}
+          onClick={() => setKind('all')}
+        >
+          Всички
+        </button>
         <button
           type="button"
           className={`vip-pass-kind-tabs__btn ${kind === 'brows' ? 'is-active' : ''}`}
@@ -223,10 +286,6 @@ export function VipPassSlotsView() {
         >
           {vipPassKindLabel('lips')}
         </button>
-        <span className="vip-pass-kind-tabs__hint">
-          {countMonth}/{VIP_MAX_SLOTS_PER_MONTH} часа за месеца
-          {countMonth < VIP_MIN_SLOTS_RECOMMENDED && ` · препоръчително поне ${VIP_MIN_SLOTS_RECOMMENDED}`}
-        </span>
       </div>
 
       <section className="panel vip-pass-calendar-panel">
@@ -253,7 +312,10 @@ export function VipPassSlotsView() {
                 }
                 const key = dateKeyFromDate(cell);
                 const isSelected = selectedDate && isSameDay(cell, selectedDate);
-                const hasSlot = store.vipPassSlots.some((s) => s.date === key && s.kind === kind);
+                const hasSlot =
+                  kind === 'all'
+                    ? store.vipPassSlots.some((s) => s.date === key)
+                    : store.vipPassSlots.some((s) => s.date === key && s.kind === kind);
                 return (
                   <button
                     key={key}
@@ -278,7 +340,14 @@ export function VipPassSlotsView() {
               <ul className="vip-slot-chips">
                 {daySlots.map((s) => (
                   <li key={s.id} className="vip-slot-chip">
-                    <span>{s.time} ч.</span>
+                    <span>
+                      {s.time} ч.
+                      {kind === 'all' && (
+                        <span className={`vip-kind-pill vip-kind-pill--${s.kind}`} style={{ marginLeft: 8 }}>
+                          {vipPassKindLabel(s.kind)}
+                        </span>
+                      )}
+                    </span>
                     <button
                       type="button"
                       className="vip-slot-chip__remove"
@@ -295,11 +364,7 @@ export function VipPassSlotsView() {
             <div className="vip-pass-add-slot">
               <div className="field vip-pass-add-slot__times-field">
                 <span>Час · начало на слота (услугата е 2 часа)</span>
-                <div
-                  className="vip-slot-time-grid"
-                  role="group"
-                  aria-label="Начален час"
-                >
+                <div className="vip-slot-time-grid" role="group" aria-label="Начален час">
                   {startTimes2h.map((t) => {
                     const isOccupied = occupiedTimes.has(t);
                     const isDemoBusy = demoBlockedTimes.has(t);
@@ -333,27 +398,12 @@ export function VipPassSlotsView() {
                 type="button"
                 className="button primary button--sm vip-pass-add-slot__submit"
                 onClick={handleAddSlot}
-                disabled={countMonth >= VIP_MAX_SLOTS_PER_MONTH || !canUseSelectedTime}
+                disabled={kind === 'all' || countMonthTotal >= VIP_MAX_SLOTS_PER_MONTH || !canUseSelectedTime}
               >
                 Добави час
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="vip-pass-month-summary">
-          <p className="vip-pass-month-summary__label">Часове за {formatMonthYearBg(visibleMonth).toLowerCase()} · {vipPassKindLabel(kind)}</p>
-          {monthSlots.length === 0 ? (
-            <p className="table-cell-muted">Още няма обявени часове за този месец.</p>
-          ) : (
-            <ul className="vip-pass-month-summary__list">
-              {monthSlots.map((s) => (
-                <li key={s.id}>
-                  {s.date} в {s.time} ч.
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </section>
 
@@ -361,10 +411,13 @@ export function VipPassSlotsView() {
         <div className="vip-pass-notify">
           <p className="vip-pass-notify__title">Извести клиенти (имейл)</p>
           <p className="vip-pass-notify__hint">
-            След като сте добавили часовете, маркирайте кои заявили интерес да получат съобщение. Отваря се имейл клиентът
-            ви с готов текст за месеца.
+            След като сте добавили часовете, маркирайте кои заявили интерес да получат съобщение. Отваря се имейл клиентът ви
+            с готов текст за месеца.
           </p>
-          {interestsForKind.length === 0 ? (
+
+          {kind === 'all' ? (
+            <p className="table-cell-muted">Изберете „VIP PASS Вежди“ или „VIP PASS Устни“, за да видите списъка с клиенти.</p>
+          ) : interestsForKind.length === 0 ? (
             <p className="table-cell-muted">
               Няма заявки за този тип —{' '}
               <Link className="text-button" to="/vip-pass/interests">
@@ -375,10 +428,10 @@ export function VipPassSlotsView() {
           ) : (
             <>
               <div className="vip-pass-notify__toolbar">
-                <button type="button" className="text-button" onClick={selectAllNotify}>
+                <button type="button" className="vip-pass-notify__action" onClick={selectAllNotify}>
                   Всички
                 </button>
-                <button type="button" className="text-button" onClick={clearNotify}>
+                <button type="button" className="vip-pass-notify__action" onClick={clearNotify}>
                   Без избор
                 </button>
               </div>
@@ -386,11 +439,7 @@ export function VipPassSlotsView() {
                 {interestsForKind.map((i) => (
                   <li key={i.id}>
                     <label className="vip-pass-notify__row">
-                      <input
-                        type="checkbox"
-                        checked={notifySelected.has(i.id)}
-                        onChange={() => toggleNotify(i.id)}
-                      />
+                      <input type="checkbox" checked={notifySelected.has(i.id)} onChange={() => toggleNotify(i.id)} />
                       <span>
                         <strong>{i.fullName}</strong> · {i.email}
                       </span>
@@ -398,13 +447,25 @@ export function VipPassSlotsView() {
                   </li>
                 ))}
               </ul>
-              <button type="button" className="button secondary button--sm" onClick={openNotifyEmail} disabled={monthSlots.length === 0}>
+              <button
+                type="button"
+                className="button secondary button--sm"
+                onClick={openNotifyEmail}
+                disabled={monthSlotsForEmail.length === 0}
+              >
                 <Mail size={16} />
                 Отвори имейл с известие
               </button>
-              {monthSlots.length === 0 && (
-                <p className="vip-pass-notify__warn">Първо добавете поне един час за месеца.</p>
-              )}
+              <button
+                type="button"
+                className="button primary button--sm"
+                onClick={sendNotifyEmail}
+                disabled={monthSlotsForEmail.length === 0}
+              >
+                <Mail size={16} />
+                Изпрати имейл с известие
+              </button>
+              {monthSlotsForEmail.length === 0 && <p className="vip-pass-notify__warn">Първо добавете поне един час за месеца.</p>}
             </>
           )}
         </div>
@@ -412,3 +473,4 @@ export function VipPassSlotsView() {
     </div>
   );
 }
+

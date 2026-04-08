@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { CalendarClock, Flame, GraduationCap, Lightbulb, Mail, Sparkles, UsersRound } from 'lucide-react';
-import { formatCurrency, formatDate, formatDateTime, temperatureLabel } from '../lib/format';
+import { CalendarClock, Flame, GraduationCap, Lightbulb, Mail, UsersRound } from 'lucide-react';
+import { formatCurrency, formatDate, formatDateTime, interestStatusLabel } from '../lib/format';
 import { useAdmin } from '../context/admin-context';
 
 export function DashboardView() {
@@ -13,8 +13,8 @@ export function DashboardView() {
     .filter((training) => training.nextDate)
     .sort((left, right) => new Date(left.nextDate).getTime() - new Date(right.nextDate).getTime())
     .slice(0, 3);
-  const hotLeads = interests.filter((person) => person.temperature === 'hot').length;
-  const reservedLeads = interests.filter((person) => person.status === 'reserved').length;
+  const hotLeads = interests.filter((person) => person.status === 'interested').length;
+  const reservedLeads = interests.filter((person) => person.status === 'enrolled').length;
   const newestLeads = [...interests]
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .slice(0, 4);
@@ -29,10 +29,6 @@ export function DashboardView() {
             Изберете тема от менюто вляво или от бутоните тук — без стъпки, без объркване, само това, което ви трябва за
             академията.
           </p>
-          <div className="dashboard-welcome-tip" role="note">
-            <Sparkles size={17} strokeWidth={1.75} aria-hidden />
-            <span>Съвет: започнете с обученията или с безплатните материали — така клиентите ви виждат най-доброто ви съдържание.</span>
-          </div>
         </div>
         <div className="hero-actions">
           <Link className="button primary" to="/trainings">
@@ -62,7 +58,7 @@ export function DashboardView() {
           </div>
           <span className="stat-label">Хора с интерес</span>
           <strong>{interests.length}</strong>
-          <p>{reservedLeads} с резервирано място</p>
+          <p>{reservedLeads} записали се</p>
         </article>
         <article className="stat-card">
           <div className="stat-icon">
@@ -172,7 +168,7 @@ export function DashboardView() {
                     <p>{person.summary}</p>
                   </div>
                   <div className="list-row-meta align-right">
-                    <span className={`soft-pill ${person.temperature}`}>{temperatureLabel(person.temperature)}</span>
+                    <span className={`soft-pill ${person.status}`}>{interestStatusLabel(person.status)}</span>
                     <small>{formatDateTime(person.lastContactAt)}</small>
                   </div>
                 </div>

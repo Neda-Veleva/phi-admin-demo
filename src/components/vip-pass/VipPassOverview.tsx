@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarRange, Mail, Sparkles } from 'lucide-react';
+import { CalendarRange, Mail } from 'lucide-react';
 import { vipPassKindLabel } from '../../lib/vip-pass';
 
 export function VipPassOverview() {
@@ -7,11 +7,10 @@ export function VipPassOverview() {
     <div className="content-stack">
       <section className="panel vip-pass-intro">
         <div className="vip-pass-intro__header">
-          <Sparkles className="vip-pass-intro__spark" size={28} strokeWidth={1.5} aria-hidden />
           <div>
             <h3 className="vip-pass-intro__title">Управление на VIP услуги</h3>
             <p className="vip-pass-intro__lede">
-              Лесно създаване и управление на извънредни VIP часове за Вежди и Устни. Обявявате 2–4 часа за месец,
+              Лесно създаване и управление на извънредни VIP часове за Вежди и Устни. Обявявате до 4 часа общо за месец,
               следите заявилите интерес и изпращате известия по имейл — директно от тук.
             </p>
           </div>
