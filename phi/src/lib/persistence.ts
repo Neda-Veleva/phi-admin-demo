@@ -6,9 +6,15 @@ import type {
   LeadArticle,
   LeadSignup,
   Service,
+  Training,
+  TrainingEvent,
+  TrainingEventAttendee,
+  TrainingFormat,
+  TrainingStatus,
   VipPassInterest,
   VipPassSlot,
 } from '../types';
+import { plainTextToSimpleRichHtml } from './html';
 
 const STORAGE_KEY = 'phi-admin-store-v2';
 const STORAGE_KEY_LEGACY = 'phi-admin-store-v1';
@@ -124,6 +130,108 @@ function mergeServicesWithSeed(parsed: Service[], seedList: Service[]): Service[
   return [...parsedNorm, ...extra];
 }
 
+function normalizeTraining(raw: Partial<Training> & { id: string; heroImage?: string }): Training {
+  const createdAt = typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString();
+  const updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : createdAt;
+
+  const status: TrainingStatus =
+    raw.status === 'draft' || raw.status === 'scheduled' || raw.status === 'published' || raw.status === 'archived'
+      ? raw.status
+      : 'draft';
+
+  const format: TrainingFormat =
+    raw.format === 'live' || raw.format === 'online' || raw.format === 'hybrid' ? raw.format : 'live';
+
+  const legacyHero = typeof raw.heroImage === 'string' ? raw.heroImage : '';
+  let heroImages = Array.isArray(raw.heroImages) ? raw.heroImages.filter((u): u is string => typeof u === 'string') : [];
+  if (heroImages.length === 0 && legacyHero.trim()) {
+    heroImages = [legacyHero];
+  }
+
+  const shortDescription = plainTextToSimpleRichHtml(typeof raw.shortDescription === 'string' ? raw.shortDescription : '');
+
+  return {
+    id: raw.id,
+    slug: typeof raw.slug === 'string' ? raw.slug : raw.id,
+    title: typeof raw.title === 'string' ? raw.title : '',
+    subtitle: typeof raw.subtitle === 'string' ? raw.subtitle : '',
+    academy: typeof raw.academy === 'string' ? raw.academy : 'PhiAcademy',
+    category: typeof raw.category === 'string' ? raw.category : '',
+    level: typeof raw.level === 'string' ? raw.level : '',
+    status,
+    format,
+    location: typeof raw.location === 'string' ? raw.location : '',
+    durationLabel: typeof raw.durationLabel === 'string' ? raw.durationLabel : '',
+    priceEUR: typeof raw.priceEUR === 'number' && !Number.isNaN(raw.priceEUR) ? raw.priceEUR : 0,
+    nextDate: typeof raw.nextDate === 'string' ? raw.nextDate : '',
+    seatsTotal: typeof raw.seatsTotal === 'number' && !Number.isNaN(raw.seatsTotal) ? Math.max(0, raw.seatsTotal) : 0,
+    seatsReserved: typeof raw.seatsReserved === 'number' && !Number.isNaN(raw.seatsReserved) ? Math.max(0, raw.seatsReserved) : 0,
+    shortDescription,
+    longDescription: typeof raw.longDescription === 'string' ? raw.longDescription : '',
+    heroImages,
+    tags: Array.isArray(raw.tags) ? raw.tags.filter((t): t is string => typeof t === 'string') : [],
+    languages: Array.isArray(raw.languages) ? raw.languages.filter((t): t is string => typeof t === 'string') : ['BG'],
+    createdAt,
+    updatedAt,
+  };
+}
+
+function mergeTrainingsWithSeed(parsed: Training[], seedList: Training[]): Training[] {
+  const parsedNorm = parsed.map((item) => normalizeTraining(item as Partial<Training> & { id: string; heroImage?: string }));
+  const ids = new Set(parsedNorm.map((t) => t.id));
+  const extra = seedList
+    .filter((s) => !ids.has(s.id))
+    .map((s) => normalizeTraining(s as Partial<Training> & { id: string; heroImage?: string }));
+  return [...parsedNorm, ...extra];
+}
+
+function normalizeTrainingEventAttendee(raw: Partial<TrainingEventAttendee> & { id: string }): TrainingEventAttendee {
+  return {
+    id: raw.id,
+    fullName: typeof raw.fullName === 'string' ? raw.fullName : '',
+    email: typeof raw.email === 'string' ? normalizeEmailToExample(raw.email) : '',
+    phone: typeof raw.phone === 'string' ? raw.phone : '',
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
+  };
+}
+
+function normalizeTrainingEvent(raw: Partial<TrainingEvent> & { id: string }): TrainingEvent {
+  const createdAt = typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString();
+  const updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : createdAt;
+  const capacity = typeof raw.capacity === 'number' && !Number.isNaN(raw.capacity) ? Math.max(0, Math.floor(raw.capacity)) : 0;
+  const date =
+    typeof raw.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? raw.date : createdAt.slice(0, 10);
+
+  const attendees: TrainingEventAttendee[] = Array.isArray(raw.attendees)
+    ? raw.attendees
+        .filter((a): a is TrainingEventAttendee => Boolean(a && typeof (a as TrainingEventAttendee).id === 'string'))
+        .map((a) => normalizeTrainingEventAttendee(a as Partial<TrainingEventAttendee> & { id: string }))
+    : [];
+
+  const published = raw.published === false ? false : true;
+
+  return {
+    id: raw.id,
+    trainingId: typeof raw.trainingId === 'string' ? raw.trainingId : '',
+    date,
+    city: typeof raw.city === 'string' ? raw.city : '',
+    capacity,
+    published,
+    attendees,
+    createdAt,
+    updatedAt,
+  };
+}
+
+function mergeTrainingEventsWithSeed(parsed: TrainingEvent[], seedList: TrainingEvent[]): TrainingEvent[] {
+  const parsedNorm = parsed.map((item) => normalizeTrainingEvent(item as Partial<TrainingEvent> & { id: string }));
+  const ids = new Set(parsedNorm.map((e) => e.id));
+  const extra = seedList
+    .filter((s) => !ids.has(s.id))
+    .map((s) => normalizeTrainingEvent(s as Partial<TrainingEvent> & { id: string }));
+  return [...parsedNorm, ...extra];
+}
+
 function normalizeLeadArticle(raw: Partial<LeadArticle> & { id: string }): LeadArticle {
   const createdAt = typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString();
   return {
@@ -196,8 +304,17 @@ function normalizeFromParsed(parsed: Partial<AdminStore>): AdminStore {
     ? mergeInterestedPeopleWithSeed(parsed.interests as InterestedPerson[], seed.interests)
     : seed.interests.map((person) => normalizeInterestedPerson(person as Partial<InterestedPerson> & { id: string }));
 
+  const trainings: Training[] = Array.isArray(parsed.trainings)
+    ? mergeTrainingsWithSeed(parsed.trainings as Training[], seed.trainings)
+    : seed.trainings.map((t) => normalizeTraining(t as Partial<Training> & { id: string; heroImage?: string }));
+
+  const trainingEvents: TrainingEvent[] = Array.isArray(parsed.trainingEvents)
+    ? mergeTrainingEventsWithSeed(parsed.trainingEvents as TrainingEvent[], seed.trainingEvents)
+    : seed.trainingEvents.map((e) => normalizeTrainingEvent(e as Partial<TrainingEvent> & { id: string }));
+
   return {
-    trainings: Array.isArray(parsed.trainings) ? parsed.trainings : seed.trainings,
+    trainings,
+    trainingEvents,
     interests,
     leadArticles,
     leadSignups,

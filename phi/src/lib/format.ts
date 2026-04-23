@@ -34,6 +34,32 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+/** YYYY-MM-DD за `<input type="date">` от ISO или YYYY-MM-DD. */
+export function toLocalDateInput(value: string) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Днешната дата (локално) YYYY-MM-DD. */
+export function getTodayYmd() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * true ако `eventYmd` е днес или в бъдещето (сравнение на календарни дни).
+ */
+export function isUpcomingYmd(eventYmd: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventYmd)) return false;
+  return eventYmd >= getTodayYmd();
+}
+
 export function toLocalDateTimeInput(value: string) {
   if (!value) return '';
 

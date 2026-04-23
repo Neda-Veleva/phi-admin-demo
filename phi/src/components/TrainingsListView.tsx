@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, Pencil, Plus } from 'lucide-react';
 import { formatCurrency, formatDate, trainingStatusLabel } from '../lib/format';
+import { stripHtml } from '../lib/html';
 import { useAdmin } from '../context/admin-context';
 import type { TrainingStatus } from '../types';
 
@@ -14,10 +15,12 @@ export function TrainingsListView() {
 
   const filteredTrainings = useMemo(() => {
     return trainings.filter((training) => {
+      const q = search.toLowerCase();
       const matchesSearch =
-        training.title.toLowerCase().includes(search.toLowerCase()) ||
-        training.category.toLowerCase().includes(search.toLowerCase()) ||
-        training.level.toLowerCase().includes(search.toLowerCase());
+        training.title.toLowerCase().includes(q) ||
+        training.subtitle.toLowerCase().includes(q) ||
+        training.category.toLowerCase().includes(q) ||
+        training.level.toLowerCase().includes(q);
       const matchesStatus = statusFilter === 'all' ? true : training.status === statusFilter;
 
       return matchesSearch && matchesStatus;
@@ -72,7 +75,7 @@ export function TrainingsListView() {
                     <span className="list-row-kicker">{training.category}</span>
                   </div>
                   <strong>{training.title}</strong>
-                  <p>{training.shortDescription}</p>
+                  <p>{stripHtml(training.shortDescription) || '—'}</p>
                   <div className="training-card-meta">
                     <span>{formatDate(training.nextDate)}</span>
                     <span>{formatCurrency(training.priceEUR)}</span>

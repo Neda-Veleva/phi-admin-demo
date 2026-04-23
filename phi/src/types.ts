@@ -7,6 +7,8 @@ export interface Training {
   id: string;
   slug: string;
   title: string;
+  /** Подзаглавие / лайн под заглавието на курса. */
+  subtitle: string;
   academy: string;
   category: string;
   level: string;
@@ -18,9 +20,11 @@ export interface Training {
   nextDate: string;
   seatsTotal: number;
   seatsReserved: number;
+  /** Кратко въведение; съдържа HTML от rich text редактора. */
   shortDescription: string;
   longDescription: string;
-  heroImage: string;
+  /** Галерия hero: data URL или външни линкове. */
+  heroImages: string[];
   tags: string[];
   languages: string[];
   createdAt: string;
@@ -127,8 +131,36 @@ export interface VipPassInterest {
   createdAt: string;
 }
 
+/** Записан на конкретна дата/събитие на курс. */
+export interface TrainingEventAttendee {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+}
+
+/**
+ * Конкретна дата и място на провеждане на курс (релация към `Training`).
+ */
+export interface TrainingEvent {
+  id: string;
+  trainingId: string;
+  /** YYYY-MM-DD (календарна дата). */
+  date: string;
+  city: string;
+  capacity: number;
+  /** Видимо за публика (напр. на сайт); „Скрий“ го нулира. */
+  published: boolean;
+  attendees: TrainingEventAttendee[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminStore {
   trainings: Training[];
+  /** Събития по дати (курс + дата + град + капацитет + записани). */
+  trainingEvents: TrainingEvent[];
   interests: InterestedPerson[];
   leadArticles: LeadArticle[];
   leadSignups: LeadSignup[];

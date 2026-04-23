@@ -79,6 +79,20 @@ export function Sidebar({
             <NavLink className={({ isActive }) => `sidebar-sublink ${isActive ? 'active' : ''}`} to="/trainings" end>
               Списък с обучения
             </NavLink>
+            <NavLink
+              className={({ isActive }) => `sidebar-sublink ${isActive ? 'active' : ''}`}
+              to="/trainings/sessions/upcoming"
+              end
+            >
+              Предстоящи дати
+            </NavLink>
+            <NavLink
+              className={({ isActive }) => `sidebar-sublink ${isActive ? 'active' : ''}`}
+              to="/trainings/sessions/past"
+              end
+            >
+              Минали дати
+            </NavLink>
             <NavLink className={({ isActive }) => `sidebar-sublink ${isActive ? 'active' : ''}`} to="/interests" end>
               Заинтересовани хора
               <span className="sidebar-inline-badges">

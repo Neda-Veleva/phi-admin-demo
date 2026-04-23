@@ -41,13 +41,28 @@ export function TrainingPreviewPage() {
         <header className="preview-card__header">
           <span className="eyebrow">{training.academy}</span>
           <h1 className="preview-card__title">{training.title}</h1>
+          {training.subtitle.trim() ? <p className="preview-card__subtitle">{training.subtitle}</p> : null}
+          {training.heroImages.length > 0 && (
+            <div className="preview-hero-strip">
+              {training.heroImages.map((url, i) => (
+                <div key={`${i}-hero`} className="preview-hero-frame">
+                  <img src={url} alt="" />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="preview-card__meta">
             <span className={`soft-pill ${training.status}`}>{trainingStatusLabel(training.status)}</span>
             <span>{training.category}</span>
             <span>{training.level}</span>
             <span>{training.format === 'live' ? 'На живо' : training.format === 'online' ? 'Онлайн' : 'Хибридно'}</span>
           </div>
-          <p className="preview-card__lead">{training.shortDescription}</p>
+          {training.shortDescription.trim() ? (
+            <div
+              className="preview-prose preview-prose--rich preview-card__rich-lead"
+              dangerouslySetInnerHTML={{ __html: training.shortDescription }}
+            />
+          ) : null}
         </header>
 
         <dl className="preview-facts">

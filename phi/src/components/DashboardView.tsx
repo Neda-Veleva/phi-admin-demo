@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CalendarClock, Flame, GraduationCap, Lightbulb, Mail, UsersRound } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateTime, interestStatusLabel } from '../lib/format';
+import { stripHtml } from '../lib/html';
 import { useAdmin } from '../context/admin-context';
 
 export function DashboardView() {
@@ -192,7 +193,7 @@ export function DashboardView() {
                 <div className="revenue-item" key={training.id}>
                   <div>
                     <strong>{training.title}</strong>
-                    <p>{training.shortDescription}</p>
+                    <p>{stripHtml(training.shortDescription) || '—'}</p>
                   </div>
                   <div className="revenue-meta">
                     <span>{formatCurrency(expectedRevenue)}</span>

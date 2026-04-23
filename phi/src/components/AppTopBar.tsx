@@ -10,6 +10,21 @@ function resolveTopbar(pathname: string): { eyebrow?: string; title: string; sub
   if (pathname === '/trainings') {
     return { title: 'Обучения' };
   }
+  if (pathname === '/trainings/sessions/upcoming') {
+    return { eyebrow: 'Обучения', title: 'Предстоящи дати' };
+  }
+  if (pathname === '/trainings/sessions/past') {
+    return { eyebrow: 'Обучения', title: 'Минали дати' };
+  }
+  if (pathname === '/trainings/sessions/new') {
+    return { eyebrow: 'Дати на обучения', title: 'Ново събитие' };
+  }
+  if (matchPath('/trainings/sessions/:eventId/edit', pathname)) {
+    return { eyebrow: 'Дати на обучения', title: 'Редакция на събитие' };
+  }
+  if (matchPath({ path: '/trainings/sessions/:eventId', end: true }, pathname)) {
+    return { eyebrow: 'Дати на обучения', title: 'Преглед на събитие' };
+  }
   if (pathname === '/trainings/new') {
     return { eyebrow: 'Обучения', title: 'Ново обучение' };
   }

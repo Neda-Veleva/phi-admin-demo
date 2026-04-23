@@ -7,6 +7,9 @@ import { InterestsListView } from './components/InterestsListView';
 import { ServiceFormPage } from './components/ServiceFormPage';
 import { ServicesView } from './components/ServicesView';
 import { Sidebar } from './components/Sidebar';
+import { TrainingEventFormPage } from './components/TrainingEventFormPage';
+import { TrainingEventPreviewPage } from './components/TrainingEventPreviewPage';
+import { TrainingEventsListView } from './components/TrainingEventsListView';
 import { TrainingFormPage } from './components/TrainingFormPage';
 import { TrainingPreviewPage } from './components/TrainingPreviewPage';
 import { TrainingsListView } from './components/TrainingsListView';
@@ -15,6 +18,7 @@ import { LeadArticleFormPage } from './components/lead-magnet/LeadArticleFormPag
 import { LeadArticlePreviewPage } from './components/lead-magnet/LeadArticlePreviewPage';
 import { LeadArticlesListView } from './components/lead-magnet/LeadArticlesListView';
 import { LeadSignupsView } from './components/lead-magnet/LeadSignupsView';
+import { createId } from './lib/format';
 import { loadStore, saveStore } from './lib/persistence';
 import type {
   AdminStore,
@@ -24,6 +28,7 @@ import type {
   LeadSignup,
   Service,
   Training,
+  TrainingEvent,
   VipPassInterest,
   VipPassSlot,
 } from './types';
@@ -35,9 +40,11 @@ function useStandaloneFormRoute() {
   const { pathname } = useLocation();
   return (
     pathname === '/trainings/new' ||
+    pathname === '/trainings/sessions/new' ||
     pathname === '/interests/new' ||
     pathname === '/services/new' ||
     pathname === '/lead-magnet/articles/new' ||
+    Boolean(matchPath('/trainings/sessions/:eventId/edit', pathname)) ||
     Boolean(matchPath('/trainings/:trainingId/edit', pathname)) ||
     Boolean(matchPath('/interests/:interestId/edit', pathname)) ||
     Boolean(matchPath('/services/:serviceId/edit', pathname)) ||
@@ -66,6 +73,55 @@ export default function App() {
           lastSyncedAt: new Date().toISOString(),
         };
       });
+    }
+
+    function upsertTrainingEvent(evt: TrainingEvent) {
+      setStore((current) => {
+        const list = current.trainingEvents ?? [];
+        const exists = list.some((item) => item.id === evt.id);
+        const trainingEvents = exists
+          ? list.map((item) => (item.id === evt.id ? evt : item))
+          : [evt, ...list];
+        return { ...current, trainingEvents, lastSyncedAt: new Date().toISOString() };
+      });
+    }
+
+    function removeTrainingEvent(id: string) {
+      setStore((current) => ({
+        ...current,
+        trainingEvents: (current.trainingEvents ?? []).filter((e) => e.id !== id),
+        lastSyncedAt: new Date().toISOString(),
+      }));
+    }
+
+    /** Копие на събитие без записани хора; връща id на новото събитие. */
+    function duplicateTrainingEvent(sourceId: string): string | null {
+      let newId: string | null = null;
+      const ts = new Date().toISOString();
+      setStore((current) => {
+        const list = current.trainingEvents ?? [];
+        const src = list.find((e) => e.id === sourceId);
+        if (!src) return current;
+        const id = createId('training-event');
+        newId = id;
+        const copy: TrainingEvent = {
+          id,
+          trainingId: src.trainingId,
+          date: src.date,
+          city: src.city,
+          capacity: src.capacity,
+          published: false,
+          attendees: [],
+          createdAt: ts,
+          updatedAt: ts,
+        };
+        return {
+          ...current,
+          trainingEvents: [copy, ...list],
+          lastSyncedAt: ts,
+        };
+      });
+      return newId;
     }
 
     function upsertInterest(person: InterestedPerson) {
@@ -212,6 +268,9 @@ export default function App() {
     return {
       store,
       upsertTraining,
+      upsertTrainingEvent,
+      removeTrainingEvent,
+      duplicateTrainingEvent,
       upsertInterest,
       addNote,
       upsertLeadArticle,
@@ -251,6 +310,12 @@ export default function App() {
           <Routes>
             <Route path="/" element={<DashboardView />} />
             <Route path="/trainings" element={<TrainingsListView />} />
+            <Route path="/trainings/sessions" element={<Navigate to="/trainings/sessions/upcoming" replace />} />
+            <Route path="/trainings/sessions/upcoming" element={<TrainingEventsListView variant="upcoming" />} />
+            <Route path="/trainings/sessions/past" element={<TrainingEventsListView variant="past" />} />
+            <Route path="/trainings/sessions/new" element={<TrainingEventFormPage />} />
+            <Route path="/trainings/sessions/:eventId/edit" element={<TrainingEventFormPage />} />
+            <Route path="/trainings/sessions/:eventId" element={<TrainingEventPreviewPage />} />
             <Route path="/trainings/new" element={<TrainingFormPage />} />
             <Route path="/trainings/:trainingId/edit" element={<TrainingFormPage />} />
             <Route path="/trainings/:trainingId" element={<TrainingPreviewPage />} />

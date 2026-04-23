@@ -7,6 +7,7 @@ import type {
   LeadSignup,
   Service,
   Training,
+  TrainingEvent,
   VipPassInterest,
   VipPassSlot,
 } from '../types';
@@ -14,6 +15,9 @@ import type {
 export interface AdminContextValue {
   store: AdminStore;
   upsertTraining: (training: Training) => void;
+  upsertTrainingEvent: (event: TrainingEvent) => void;
+  removeTrainingEvent: (eventId: string) => void;
+  duplicateTrainingEvent: (sourceId: string) => string | null;
   upsertInterest: (person: InterestedPerson) => void;
   addNote: (interestId: string, note: InterestNote) => void;
   upsertLeadArticle: (article: LeadArticle) => void;
